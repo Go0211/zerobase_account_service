@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 import java.util.UUID;
 
 import static com.example.accountservicezerobase.type.TransactionResultType.F;
@@ -98,16 +99,16 @@ public class TransactionService {
 
         validateCancelBalance(transaction, account, amount);
 
-        account.useBalance(amount);
+        account.cancelBalance(amount);
 
         return TransactionDto.fromEntity(saveAndGetTransaction(CANCEL, S, account, amount));
     }
 
     private void validateCancelBalance(Transaction transaction, Account account, Long amount) {
-        if (transaction.getAccount().getId() != account.getId()) {
+        if (!Objects.equals(transaction.getAccount().getId(), account.getId())) {
             throw new AccountException(ErrorCode.TRANSACTION_ACCOUNT_UN_MATCH);
         }
-        if (transaction.getAmount() != amount) {
+        if (!Objects.equals(transaction.getAmount(), amount)) {
             throw new AccountException(ErrorCode.CANCEL_MUST_FULLY);
         }
         if (transaction.getTransactedAt().isBefore(LocalDateTime.now().minusYears(1))) {
@@ -121,5 +122,11 @@ public class TransactionService {
                 .orElseThrow(() -> new AccountException(ErrorCode.ACCOUNT_NOT_FOUND));
 
         saveAndGetTransaction(CANCEL, F, account, amount);
+    }
+
+    @Transactional
+    public TransactionDto queryTransaction(String transactionId) {
+        return TransactionDto.fromEntity(transactionRepository.findByTransactionId(transactionId)
+                .orElseThrow(() -> new AccountException(ErrorCode.TRANSACTION_NOT_FOUND)));
     }
 }
